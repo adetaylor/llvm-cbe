@@ -473,6 +473,50 @@ raw_ostream &CWriter::printSimpleType(raw_ostream &Out, Type *Ty,
   }
 }
 
+void CWriter::exploreTypeName(Type *Ty, bool isSigned,
+                       std::pair<AttributeList, CallingConv::ID> PAL) {
+  if (Ty->isSingleValueType() || Ty->isVoidTy()) {
+    if (!Ty->isPointerTy() && !Ty->isVectorTy())
+      return;
+  }
+
+  if (isEmptyType(Ty))
+    return;
+
+  switch (Ty->getTypeID()) {
+  case Type::FunctionTyID: {
+    FunctionType *FTy = cast<FunctionType>(Ty);
+    getFunctionName(FTy, PAL);
+    break;
+  }
+  case Type::StructTyID: {
+    TypedefDeclTypes.insert(Ty);
+    getStructName(cast<StructType>(Ty));
+    break;
+  }
+
+  case Type::PointerTyID: {
+    Type *ElTy = Ty->getPointerElementType();
+    exploreTypeName(ElTy, false);
+    break;
+  }
+
+  case Type::ArrayTyID: {
+    TypedefDeclTypes.insert(Ty);
+    getArrayName(cast<ArrayType>(Ty));
+    break;
+  }
+
+  case Type::VectorTyID: {
+    TypedefDeclTypes.insert(Ty);
+    getVectorName(cast<VectorType>(Ty), true);
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 // Pass the Type* and the variable name and this prints out the variable
 // declaration.
 raw_ostream &
@@ -557,6 +601,15 @@ raw_ostream &CWriter::printStructDeclaration(raw_ostream &Out,
   if (STy->isPacked())
     Out << "#ifdef _MSC_VER\n#pragma pack(pop)\n#endif\n";
   return Out;
+}
+
+void CWriter::exploreStructDeclaration(StructType *STy) {
+  unsigned Idx = 0;
+  for (StructType::element_iterator I = STy->element_begin(),
+                                    E = STy->element_end();
+       I != E; ++I, Idx++) {
+    exploreTypeName(*I, false);
+  }
 }
 
 raw_ostream &CWriter::printFunctionAttributes(raw_ostream &Out,
@@ -683,10 +736,7 @@ CWriter::printFunctionProto(raw_ostream &Out, FunctionType *FTy,
     Out << " __thiscall";
     break;
   default:
-#ifndef NDEBUG
-    errs() << "Unhandled calling convention " << Attrs.second << "\n";
-#endif
-    errorWithMessage("Encountered Unhandled Calling Convention");
+    Out << "/* Unhandled calling convention " << Attrs.second << "*/";
     break;
   }
   Out << ' ' << Name << '(';
@@ -759,6 +809,14 @@ raw_ostream &CWriter::printVectorDeclaration(raw_ostream &Out,
       << "];\n} __attribute__((aligned(" << TD->getABITypeAlignment(VTy)
       << ")));\n";
   return Out;
+}
+
+void CWriter::exploreArrayDeclaration(ArrayType *ATy) {
+  exploreTypeName(ATy->getElementType());
+}
+
+void CWriter::exploreVectorDeclaration(VectorType *VTy) {
+  exploreTypeName(VTy->getElementType());
 }
 
 void CWriter::printConstantArray(ConstantArray *CPA,
@@ -3328,6 +3386,15 @@ void CWriter::printModuleTypes(raw_ostream &Out) {
 
   Out << "\n/* Function definitions */\n";
 
+  // Before we output function prototypes, we have to ensure they're all
+  // known. Some of them might be hiding in struct definitions that
+  // we haven't yet explored. So explore them.
+  std::set<Type *> TypesExplored;
+  for (auto it = TypedefDeclTypes.begin(), end = TypedefDeclTypes.end();
+       it != end; ++it) {
+    exploreContainedTypes(*it, TypesExplored);
+  }
+
   struct FunctionDefinition {
     FunctionType *FT;
     std::vector<FunctionType *> Dependencies;
@@ -3407,6 +3474,33 @@ void CWriter::forwardDeclareStructs(raw_ostream &Out, Type *Ty,
 
   if (StructType *ST = dyn_cast<StructType>(Ty)) {
     Out << getStructName(ST) << ";\n";
+  }
+}
+
+// Push the struct onto the stack and recursively push all structs
+// this one depends on.
+void CWriter::exploreContainedTypes(Type *Ty, std::set<Type *> &TypesExplored) {
+  // Check to see if we have already printed this struct.
+  if (!TypesExplored.insert(Ty).second)
+    return;
+  // Skip empty structs
+  if (isEmptyType(Ty))
+    return;
+
+  // Print all contained types first.
+  for (Type::subtype_iterator I = Ty->subtype_begin(), E = Ty->subtype_end();
+       I != E; ++I)
+    exploreContainedTypes(*I, TypesExplored);
+
+  if (StructType *ST = dyn_cast<StructType>(Ty)) {
+    // Explore structure type out.
+    exploreStructDeclaration(ST);
+  } else if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    // Explore array type out.
+    exploreArrayDeclaration(AT);
+  } else if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
+    // Explore vector type out.
+    exploreVectorDeclaration(VT);
   }
 }
 

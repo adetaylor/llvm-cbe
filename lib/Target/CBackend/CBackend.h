@@ -185,8 +185,15 @@ private:
   raw_ostream &printStructDeclaration(raw_ostream &Out, StructType *Ty);
   raw_ostream &printArrayDeclaration(raw_ostream &Out, ArrayType *Ty);
   raw_ostream &printVectorDeclaration(raw_ostream &Out, VectorType *Ty);
+  void exploreStructDeclaration(StructType *Ty);
+  void exploreArrayDeclaration(ArrayType *Ty);
+  void exploreVectorDeclaration(VectorType *Ty);
 
   raw_ostream &printTypeName(raw_ostream &Out, Type *Ty, bool isSigned = false,
+                             std::pair<AttributeList, CallingConv::ID> PAL =
+                                 std::make_pair(AttributeList(),
+                                                CallingConv::C));
+  void exploreTypeName(Type *Ty, bool isSigned = false,
                              std::pair<AttributeList, CallingConv::ID> PAL =
                                  std::make_pair(AttributeList(),
                                                 CallingConv::C));
@@ -239,6 +246,7 @@ private:
 
   void printModuleTypes(raw_ostream &Out);
   void printContainedTypes(raw_ostream &Out, Type *Ty, std::set<Type *> &);
+  void exploreContainedTypes(Type *Ty, std::set<Type *> &);
 
   void printFloatingPointConstants(Function &F);
   void printFloatingPointConstants(const Constant *C);
