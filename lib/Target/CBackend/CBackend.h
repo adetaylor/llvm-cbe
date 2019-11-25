@@ -177,6 +177,7 @@ private:
         std::make_pair(F->getAttributes(), F->getCallingConv()),
         GetValueName(F), nullptr);
   }
+  void exploreFunctionProto(Function *F);
 
   raw_ostream &
   printFunctionDeclaration(raw_ostream &Out, FunctionType *Ty,

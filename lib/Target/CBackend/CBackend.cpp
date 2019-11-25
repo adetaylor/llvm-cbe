@@ -696,6 +696,24 @@ raw_ostream &CWriter::printFunctionDeclaration(
   return Out << ";\n";
 }
 
+void CWriter::exploreFunctionProto(Function *F) {
+  FunctionType* FTy = F->getFunctionType();
+  std::pair<AttributeList, CallingConv::ID> Attrs = std::make_pair(F->getAttributes(), F->getCallingConv());
+  AttributeList &PAL = Attrs.first;
+  FunctionType::param_iterator I = FTy->param_begin(), E = FTy->param_end();
+
+  unsigned Idx = 1;
+  for (; I != E; ++I) {
+    Type *ArgTy = *I;
+    if (PAL.hasAttribute(Idx, Attribute::ByVal)) {
+      cwriter_assert(ArgTy->isPointerTy());
+      ArgTy = cast<PointerType>(ArgTy)->getElementType();
+    }
+    exploreTypeName(ArgTy);
+    ++Idx;
+  }
+}
+
 raw_ostream &
 CWriter::printFunctionProto(raw_ostream &Out, FunctionType *FTy,
                             std::pair<AttributeList, CallingConv::ID> Attrs,
@@ -2351,6 +2369,12 @@ void CWriter::generateHeader(Module &M) {
     if (getGlobalVariableClass(&*I))
       continue;
     printTypeName(NullOut, I->getType()->getElementType(), false);
+  }
+  // Explore ant functions which take functions.
+  // Yes, this sort of thing happens. I blame Haskell Curry.
+  // This ensures they're in the symbol table.
+  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+    exploreFunctionProto(&*I);
   }
   printModuleTypes(Out);
 
