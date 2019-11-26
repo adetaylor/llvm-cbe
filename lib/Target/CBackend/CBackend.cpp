@@ -248,7 +248,7 @@ raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
   }
 
   case Type::FunctionTyID: {
-    FunctionType *FTy = cast<FunctionType>(Ty);
+    //FunctionType *FTy = cast<FunctionType>(Ty);
     return Out << " /* function type goes here - ADE */ ";
   }
 
@@ -2443,11 +2443,14 @@ void CWriter::generateHeader(Module &M) {
         continue;
       case Intrinsic::uadd_with_overflow:
       case Intrinsic::sadd_with_overflow:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::ssub_sat:
       case Intrinsic::usub_with_overflow:
       case Intrinsic::ssub_with_overflow:
       case Intrinsic::umul_with_overflow:
       case Intrinsic::smul_with_overflow:
       case Intrinsic::usub_sat:
+      case Intrinsic::uadd_sat:
       case Intrinsic::bswap:
       case Intrinsic::ceil:
       case Intrinsic::ctlz:
@@ -4289,6 +4292,8 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT, unsigned Opcode,
     isSigned = false;
     break;
   case Intrinsic::sadd_with_overflow:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
   case Intrinsic::ssub_with_overflow:
   case Intrinsic::smul_with_overflow:
     isSigned = true;
@@ -4370,6 +4375,26 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT, unsigned Opcode,
       Out << "  r.field1 = (a >= -b);\n";
       break;
 
+    case Intrinsic::sadd_sat:
+      //cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      Out << "  r.field0 = a+b;\n"; // TODO - all nonsense
+      Out << "  if (a >= -b) { r.field0 = ";
+      printLimitValue(*elemIntT, true, true, Out);
+      Out << "; }\n";
+      break;
+
+    case Intrinsic::ssub_sat:
+      //cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      Out << "  r.field0 = a - b;\n";
+      Out << "  if (b <= 0 ? a > "; // TODO - all nonsense
+      printLimitValue(*elemIntT, true, true, Out);
+      Out << " + b : a < ";
+      printLimitValue(*elemIntT, true, false, Out);
+      Out << " + b) { r.field0 = ";
+      printLimitValue(*elemIntT, true, false, Out);
+      Out << "; }\n";
+      break;
+
     case Intrinsic::sadd_with_overflow:
       //   r.field0 = a + b;
       //   r.field1 = (b > 0 && a > XX_MAX - b) ||
@@ -4391,7 +4416,16 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT, unsigned Opcode,
 
     case Intrinsic::usub_sat:
       //cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      // TODO - all nonsense
       Out << "  if (b >= a) { r.field0 = 0; } else { r.field0 = a - b; };\n";
+      break;
+
+    case Intrinsic::uadd_sat:
+      //cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      // TODO - all nonsense
+      Out << "  r.field0 = (a < -b) ? (a + b) : ";
+      printLimitValue(*elemIntT, true, true, Out);
+      Out << ";\n";
       break;
 
     case Intrinsic::ssub_with_overflow:
@@ -4556,11 +4590,14 @@ bool CWriter::lowerIntrinsics(Function &F) {
           case Intrinsic::ppc_altivec_lvsl:
           case Intrinsic::uadd_with_overflow:
           case Intrinsic::sadd_with_overflow:
+          case Intrinsic::sadd_sat:
+          case Intrinsic::ssub_sat:
           case Intrinsic::usub_with_overflow:
           case Intrinsic::ssub_with_overflow:
           case Intrinsic::umul_with_overflow:
           case Intrinsic::smul_with_overflow:
           case Intrinsic::usub_sat:
+          case Intrinsic::uadd_sat:
           case Intrinsic::bswap:
           case Intrinsic::ceil:
           case Intrinsic::ctlz:
@@ -4897,11 +4934,14 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID) {
     return true;
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::usub_sat:
+  case Intrinsic::uadd_sat:
   case Intrinsic::bswap:
   case Intrinsic::ceil:
   case Intrinsic::ctlz:
