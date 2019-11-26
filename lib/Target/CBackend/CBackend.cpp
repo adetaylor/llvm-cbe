@@ -3605,6 +3605,8 @@ void CWriter::printFunction(Function &F) {
       unsigned Alignment = AI->getAlignment();
       bool IsOveraligned = Alignment && Alignment > TD->getABITypeAlignment(
                                                         AI->getAllocatedType());
+      if (isEmptyType(AI->getAllocatedType()))
+        continue;
       Out << "  ";
       if (IsOveraligned) {
         headerUseMsAlign();
