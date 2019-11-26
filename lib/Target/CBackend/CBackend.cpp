@@ -191,7 +191,7 @@ static std::string CBEMangle(const std::string &S) {
 raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
                                       bool isSigned) {
   if (StructType *ST = dyn_cast<StructType>(Ty)) {
-    cwriter_assert(!isEmptyType(ST));
+    // cwriter_assert(!isEmptyType(ST)); // empty structs OK in Rust
     TypedefDeclTypes.insert(Ty);
 
     if (!ST->isLiteral() && !ST->getName().empty())
