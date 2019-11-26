@@ -2442,6 +2442,7 @@ void CWriter::generateHeader(Module &M) {
       case Intrinsic::ssub_with_overflow:
       case Intrinsic::umul_with_overflow:
       case Intrinsic::smul_with_overflow:
+      case Intrinsic::usub_sat:
       case Intrinsic::bswap:
       case Intrinsic::ceil:
       case Intrinsic::ctlz:
@@ -4382,6 +4383,11 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT, unsigned Opcode,
       Out << "  r.field1 = (a < b);\n";
       break;
 
+    case Intrinsic::usub_sat:
+      cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      Out << "  if (b >= a) { r.field0 = 0; } else { r.field0 = a - b; };\n";
+      break;
+
     case Intrinsic::ssub_with_overflow:
       cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
       Out << "  r.field0 = a - b;\n";
@@ -4548,6 +4554,7 @@ bool CWriter::lowerIntrinsics(Function &F) {
           case Intrinsic::ssub_with_overflow:
           case Intrinsic::umul_with_overflow:
           case Intrinsic::smul_with_overflow:
+          case Intrinsic::usub_sat:
           case Intrinsic::bswap:
           case Intrinsic::ceil:
           case Intrinsic::ctlz:
@@ -4888,6 +4895,7 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID) {
   case Intrinsic::ssub_with_overflow:
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
+  case Intrinsic::usub_sat:
   case Intrinsic::bswap:
   case Intrinsic::ceil:
   case Intrinsic::ctlz:
