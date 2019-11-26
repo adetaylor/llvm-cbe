@@ -214,7 +214,7 @@ raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
     if (NumBits == 1)
       return Out << "bool";
     else {
-      cwriter_assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
+      //cwriter_assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
       return Out << (isSigned ? "i" : "u") << NumBits;
     }
   }
@@ -447,7 +447,7 @@ raw_ostream &CWriter::printSimpleType(raw_ostream &Out, Type *Ty,
     else if (NumBits <= 64)
       return Out << (isSigned ? "int64_t" : "uint64_t");
     else {
-      cwriter_assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
+      //cwriter_assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
       return Out << (isSigned ? "int128_t" : "uint128_t");
     }
   }
@@ -4254,7 +4254,8 @@ static void printLimitValue(IntegerType &Ty, bool isSigned, bool isMax,
   } else if (NumBits <= 64) {
     type = "LLONG";
   } else {
-    llvm_unreachable("Bit widths > 64 not implemented yet");
+    type = "BONKERS_CODE_GENERATED_";
+    //llvm_unreachable("Bit widths > 64 not implemented yet");
   }
 
   if (isSigned)
