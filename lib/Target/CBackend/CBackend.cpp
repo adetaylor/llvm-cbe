@@ -247,6 +247,11 @@ raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
     return Out << "a" << ATy->getNumElements();
   }
 
+  case Type::FunctionTyID: {
+    FunctionType *FTy = cast<FunctionType>(Ty);
+    return Out << " /* function type goes here - ADE */ ";
+  }
+
   default:
 #ifndef NDEBUG
     errs() << "Unknown primitive type: " << *Ty << "\n";
@@ -4385,7 +4390,7 @@ void CWriter::printIntrinsicDefinition(FunctionType *funT, unsigned Opcode,
       break;
 
     case Intrinsic::usub_sat:
-      cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
+      //cwriter_assert(cast<StructType>(retT)->getElementType(0) == elemT);
       Out << "  if (b >= a) { r.field0 = 0; } else { r.field0 = a - b; };\n";
       break;
 
