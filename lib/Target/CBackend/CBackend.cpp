@@ -234,7 +234,7 @@ raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
   case Type::VectorTyID: {
     TypedefDeclTypes.insert(Ty);
     VectorType *VTy = cast<VectorType>(Ty);
-    cwriter_assert(VTy->getNumElements() != 0);
+    //cwriter_assert(VTy->getNumElements() != 0);
     printTypeString(Out, VTy->getElementType(), isSigned);
     return Out << "x" << VTy->getNumElements();
   }
@@ -242,7 +242,7 @@ raw_ostream &CWriter::printTypeString(raw_ostream &Out, Type *Ty,
   case Type::ArrayTyID: {
     TypedefDeclTypes.insert(Ty);
     ArrayType *ATy = cast<ArrayType>(Ty);
-    cwriter_assert(ATy->getNumElements() != 0);
+    //cwriter_assert(ATy->getNumElements() != 0);
     printTypeString(Out, ATy->getElementType(), isSigned);
     return Out << "a" << ATy->getNumElements();
   }
